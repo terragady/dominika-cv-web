@@ -39,9 +39,14 @@
         padding: 1.75rem;
       }
       h1 {
-        margin: 0 0 1.25rem;
+        margin: 0 0 0.5rem;
         font-size: 1.3rem;
         color: var(--accent);
+      }
+      #build-info {
+        margin: 0 0 1.25rem;
+        font-size: 0.75rem;
+        color: var(--muted);
       }
       label {
         display: block;
@@ -117,6 +122,11 @@
     <main>
       <h1>Dominika Michalik — CV</h1>
 
+      <!-- Which build is published, so it's obvious at a glance whether this is
+           the current CV. Filled in from manifest.json on load; stays hidden
+           until then, and if nothing is published yet. -->
+      <p id="build-info" hidden></p>
+
       <!-- A real <form> (rather than a bare input) so browser password
            managers recognise this and offer to save the passphrase. That is
            the intended way to avoid retyping it — deliberately not localStorage,
@@ -172,6 +182,36 @@
         if (!r.ok) throw new Error("Could not load manifest.json");
         return r.json();
       }));
+
+      // Show which build is published, e.g. "Version 1.2.2 · 3 September 2026".
+      // Fetched on load rather than on download, so it's visible before typing
+      // anything. Failure is ignored — the download path reports errors properly.
+      // Label stays English to match the rest of the page chrome; the date is
+      // formatted in the reader's own locale.
+      (async () => {
+        const el = document.getElementById("build-info");
+        try {
+          const manifest = await getManifest();
+          const parts = [];
+          if (manifest.version) parts.push(`Version ${manifest.version}`);
+          const built = manifest.builtAt ? new Date(manifest.builtAt) : null;
+          if (built && !Number.isNaN(built.getTime())) {
+            parts.push(
+              built.toLocaleDateString(undefined, {
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+              }),
+            );
+          }
+          if (parts.length) {
+            el.textContent = parts.join(" · ");
+            el.hidden = false;
+          }
+        } catch {
+          /* Nothing published yet — leave the line hidden. */
+        }
+      })();
 
       async function deriveKey(passphrase, salt) {
         if (cached.passphrase === passphrase && cached.key) return cached.key;
