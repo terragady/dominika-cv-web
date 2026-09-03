@@ -1,0 +1,7 @@
+{
+  "version": "1.2.2",
+  "files": {
+    "en": { "src": "cv-en.pdf.enc", "name": "Dominika_Michalik_CV_2026_v1.2.2.pdf" },
+    "no": { "src": "cv-no.pdf.enc", "name": "Dominika_Michalik_CV_2026_v1.2.2_NO.pdf" }
+  }
+}

@@ -1,0 +1,9 @@
+# This site is a private convenience page, not a public profile. Disallow
+# everything: well-behaved crawlers then never fetch the .enc files, which is
+# the only lever available for non-HTML assets on GitHub Pages (an
+# X-Robots-Tag header would be the usual way, but Pages can't set headers).
+#
+# Nothing sensitive is listed here on purpose. robots.txt is itself public, so
+# naming a path is a way of publishing it, not hiding it.
+User-agent: *
+Disallow: /
