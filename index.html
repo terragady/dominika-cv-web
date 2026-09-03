@@ -51,8 +51,11 @@
       }
       input[type="password"] {
         width: 100%;
-        padding: 0.6rem 0.7rem;
+        /* Must stay >= 16px: iOS Safari zooms the viewport when focusing an
+           input with smaller text, which leaves the page awkwardly scaled. */
         font-size: 1rem;
+        min-height: 2.75rem;
+        padding: 0.6rem 0.7rem;
         border: 1px solid var(--rule);
         border-radius: 6px;
       }
@@ -64,6 +67,8 @@
       .row { display: flex; gap: 0.6rem; margin-top: 1rem; }
       button {
         flex: 1;
+        /* 2.75rem = 44px, the minimum comfortable touch target. */
+        min-height: 2.75rem;
         padding: 0.65rem 0.5rem;
         font: inherit;
         font-size: 0.95rem;
@@ -72,6 +77,7 @@
         border: 0;
         border-radius: 6px;
         cursor: pointer;
+        touch-action: manipulation;
       }
       button:hover:not(:disabled) { background: #17395a; }
       button:disabled { opacity: 0.5; cursor: default; }
@@ -82,12 +88,28 @@
         color: var(--muted);
       }
       #status[data-state="error"] { color: #a3282d; }
+      #status a {
+        color: var(--accent);
+      }
       footer {
         margin-top: 1.25rem;
         padding-top: 0.9rem;
         border-top: 1px solid var(--rule);
         font-size: 0.75rem;
         color: var(--muted);
+      }
+      /* On a narrow phone the card shouldn't waste width on outer padding or
+         look like a floating box — let it fill the screen instead. */
+      @media (max-width: 30rem) {
+        body { padding: 0.75rem; }
+        main { padding: 1.25rem; }
+      }
+      @media (prefers-color-scheme: dark) {
+        :root { --ink: #e8e8e8; --muted: #a0a0a0; --rule: #3a3a3a; --accent: #6fa8dc; }
+        body { background: #16181c; }
+        main { background: #1e2126; }
+        input[type="password"] { background: #16181c; color: var(--ink); }
+        button { color: #10131a; }
       }
     </style>
   </head>
@@ -99,6 +121,12 @@
            managers recognise this and offer to save the passphrase. That is
            the intended way to avoid retyping it — deliberately not localStorage,
            which would leave it readable to any script on the origin. -->
+      <!-- No attempt is made to get browser password managers to save the
+           passphrase. They trigger their save prompt on a form submit that
+           navigates, and this form deliberately doesn't navigate — it decrypts
+           in place. A hidden username field and autocomplete hints were tried
+           and didn't change that. Save it as a normal login item in the
+           password manager by hand instead. -->
       <form id="unlock" autocomplete="on">
         <label for="passphrase">Passphrase</label>
         <input
@@ -204,11 +232,25 @@
           link.href = url;
           link.download = entry.name;
           link.click();
-          // Revoked on a delay: Safari aborts the download if the object URL
-          // disappears in the same tick as the click.
-          setTimeout(() => URL.revokeObjectURL(url), 30_000);
 
-          setStatus(`Downloaded ${entry.name}`);
+          // iOS Safari honours the download attribute inconsistently — it may
+          // ignore the synthetic click entirely, leaving a button that looks
+          // broken. Rather than sniff the browser, always offer a real tappable
+          // link as a fallback; on desktop the file has already saved and this
+          // is simply ignored.
+          statusEl.replaceChildren(
+            document.createTextNode("Ready. "),
+            Object.assign(document.createElement("a"), {
+              href: url,
+              download: entry.name,
+              textContent: "Tap here if nothing downloaded",
+            }),
+          );
+          statusEl.dataset.state = "";
+
+          // Revoked on a long delay: Safari aborts an in-flight download if the
+          // object URL disappears, and the fallback link above needs it alive.
+          setTimeout(() => URL.revokeObjectURL(url), 300_000);
         } catch (error) {
           // An AES-GCM tag mismatch throws a bare OperationError with no
           // message, and by far the likeliest cause is a mistyped passphrase.
